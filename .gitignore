@@ -47,3 +47,7 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# MacOS and other Files
+.DS_Store
+.vscode/

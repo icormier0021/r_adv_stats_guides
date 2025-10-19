@@ -1,0 +1,60 @@
+---
+title: "Creating clean stats tables"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(fs)
+
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+knitr::opts_chunk$set(echo = TRUE)
+
+packages <- c("knitr", "kableExtra", "psych", "dplyr", "haven")
+
+if(!require("pacman"))install.packages("pacman")
+
+pacman::p_load(char = packages, character.only = TRUE)
+
+```
+
+The expss() package helps create cleaner output tables. All you have to do is call it in your current enviornment and it will go into effect. It also contains various helper functions for further table formatting. 
+
+```{r expss, echo=TRUE}
+library(expss)
+```
+
+We will use an example SAQ-8 dataset to illustrate how to create a correlation matrix and how to format it for output purposes.
+```{r datasetup}
+saq <- read_sav("https://stats.idre.ucla.edu/wp-content/uploads/2018/05/SAQ8.sav")
+saq8 <- saq %>% select(q01, q02, q03, q04, q05, q06, q07, q08)
+```
+
+```{r corrMat}
+corrMat <- cor(saq8, use = "pairwise.complete.obs") #This is just a simple correlation matrix
+
+corrMat2 <- corr.test(saq8, use="pairwise", method = "pearson", adjust = "none") #This includes p values
+
+
+round(corrMat,3) #This sends the matrix to the output screen with all values rounded to 3
+
+```
+To make the table cleaner, you can use the following template code. 
+
+```{r cleanTables}
+r <- round(corrMat2$r, 3)
+p <- corrMat2$p
+sig <- ifelse(p < .001, "***",
+         ifelse(p < .01,  "**",
+         ifelse(p < .05,  "*", "")))
+cleaned <- sprintf("%.3f%s", r, sig)
+dim(cleaned) <- dim(r)
+dimnames(cleaned) <- dimnames(r)
+cleaned[upper.tri(cleaned, diag = FALSE)] <- "" #Hide upper poriton of table
+
+table <- data.frame(Variable = rownames(cleaned), cleaned, check.names = FALSE)
+kbl(table, align = "l", row.names = FALSE) %>%
+  kable_styling(full_width = FALSE) %>% 
+  footnote(general = "Pearson r (pairwise). * p<.05, ** p<.01, *** p<.001")
+
+```
+To save the table as a self-contained html, you can use the save_kable() function. 
